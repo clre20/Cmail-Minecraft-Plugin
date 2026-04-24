@@ -1,0 +1,9 @@
+messages:
+  login-notify: "&a你目前有 &e%n% &a封未讀郵件！使用 /mail 查看。"
+  mail-sent: "&a郵件已成功寄出！"
+  no-mail: "&c目前沒有任何郵件。"
+  gui-title-main: "郵件管理"
+  gui-title-inbox: "收件箱"
+  gui-title-send: "放入附件 (按確認送出)"
+  confirm: "&a[確認送出]"
+  cancel: "&c[取消寄送]"

@@ -1,0 +1,11 @@
+name: Cmail
+version: '1.0'
+main: clre20.cmail.Cmail
+api-version: '1.21'
+prefix: Cmail
+authors: [ Clre20 ]
+description: A Minecraft Mail plugin
+commands:
+  mail:
+    description: 郵件主命令
+    usage: /mail [send]
