@@ -53,5 +53,5 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
 ### 2. 控制台直接發送基本道具
 控制台發送 64 個鑽石在第 4 格，16 個金錠在第 22 格給特定玩家：
 ```bash
-cmail consolesend smart 這是您的活動獎勵 DIAMOND:4:64 GOLD_INGOT:22:16
+cmail consolesend playerC 這是您的活動獎勵 DIAMOND:4:64 GOLD_INGOT:22:16
 ```
