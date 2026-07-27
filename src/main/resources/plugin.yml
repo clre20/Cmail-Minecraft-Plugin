@@ -1,0 +1,21 @@
+name: Cmail
+version: '6.2.3'
+main: clre20.cmail.Cmail
+api-version: '1.21.11'
+prefix: Cmail
+authors: [ Clre20 ]
+description: A Minecraft Mail plugin
+softdepend: [Vault]
+commands:
+  cmail:
+    description: 郵件主命令
+    usage: /cmail [mail|send]
+    aliases: [mail]
+
+permissions:
+  cmail.use:
+    description: 允許玩家使用 Cmail 的基本功能
+    default: true
+  cmail.admin:
+    description: 允許管理員重載 Cmail 設定檔
+    default: op
