@@ -256,7 +256,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 
                 String targetsArg = args[1];
                 boolean isAll = targetsArg.equalsIgnoreCase("all");
-                if (isAll && !sender.isOp()) {
+                if (isAll && !sender.hasPermission("cmail.admin")) {
                     sender.sendMessage(getFormattedMessage("messages.no-permission"));
                     return true;
                 }
@@ -363,16 +363,6 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 player.sendMessage(getFormattedMessage("messages.no-permission"));
                 return true;
             }
-            // Cooldown check
-            if (getConfig().getBoolean("cooldown.enabled", true) && !player.hasPermission("cmail.admin")) {
-                long now = System.currentTimeMillis();
-                long cooldownEnd = cooldowns.getOrDefault(player.getUniqueId(), 0L);
-                if (now < cooldownEnd) {
-                    long remaining = (cooldownEnd - now) / 1000L;
-                    player.sendMessage(getFormattedMessage("messages.cooldown").replace("%time%", String.valueOf(remaining)));
-                    return true;
-                }
-            }
 
             // 檢查參數長度: /cmail send [收件者] [文字]
             if (args.length < 3) {
@@ -381,13 +371,24 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
             }
 
             String targetName = args[1];
-            // 取得離線玩家資訊
-            OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
+            boolean isAll = targetName.equalsIgnoreCase("all");
 
-            // 驗證玩家是否曾加入過伺服器
-            if (!target.hasPlayedBefore() && !target.isOnline()) {
-                player.sendMessage(getFormattedMessage("messages.player-not-found").replace("%player%", targetName));
-                return true;
+            if (isAll) {
+                if (!player.hasPermission("cmail.admin")) {
+                    player.sendMessage(getFormattedMessage("messages.no-permission"));
+                    return true;
+                }
+            } else {
+                // Cooldown check
+                if (getConfig().getBoolean("cooldown.enabled", true) && !player.hasPermission("cmail.admin")) {
+                    long now = System.currentTimeMillis();
+                    long cooldownEnd = cooldowns.getOrDefault(player.getUniqueId(), 0L);
+                    if (now < cooldownEnd) {
+                        long remaining = (cooldownEnd - now) / 1000L;
+                        player.sendMessage(getFormattedMessage("messages.cooldown").replace("%time%", String.valueOf(remaining)));
+                        return true;
+                    }
+                }
             }
 
             // 組合後續所有文字作為訊息內容
@@ -397,32 +398,28 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
             }
             String message = msgBuilder.toString().trim();
 
-            // 開啟附件 GUI，並傳入收件者的 UUID
-            gui.openSendGUI(player, target.getUniqueId(), message, false);
+            if (isAll) {
+                // 開啟附件 GUI，傳入 Nil UUID，並設定 isBroadcast = true
+                gui.openSendGUI(player, new UUID(0L, 0L), message, true);
+            } else {
+                // 取得離線玩家資訊
+                OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
 
-            // Set Cooldown
-            if (getConfig().getBoolean("cooldown.enabled", true) && !player.hasPermission("cmail.admin")) {
-                int seconds = getConfig().getInt("cooldown.seconds", 10);
-                cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + (seconds * 1000L));
-            }
-        } else if (args[0].equalsIgnoreCase("sendall")) {
-            if (!player.isOp()) {
-                player.sendMessage(getFormattedMessage("messages.no-permission"));
-                return true;
-            }
-            if (args.length < 2) {
-                player.sendMessage(getFormattedMessage("messages.usage"));
-                return true;
-            }
+                // 驗證玩家是否曾加入過伺服器
+                if (!target.hasPlayedBefore() && !target.isOnline()) {
+                    player.sendMessage(getFormattedMessage("messages.player-not-found").replace("%player%", targetName));
+                    return true;
+                }
 
-            StringBuilder msgBuilder = new StringBuilder();
-            for (int i = 1; i < args.length; i++) {
-                msgBuilder.append(args[i]).append(" ");
-            }
-            String message = msgBuilder.toString().trim();
+                // 開啟附件 GUI，並傳入收件者的 UUID
+                gui.openSendGUI(player, target.getUniqueId(), message, false);
 
-            // 開啟附件 GUI，傳入 Nil UUID，並設定 isBroadcast = true
-            gui.openSendGUI(player, new UUID(0L, 0L), message, true);
+                // Set Cooldown
+                if (getConfig().getBoolean("cooldown.enabled", true) && !player.hasPermission("cmail.admin")) {
+                    int seconds = getConfig().getInt("cooldown.seconds", 10);
+                    cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + (seconds * 1000L));
+                }
+            }
         } else {
             if (player.hasPermission("cmail.use")) {
                 player.sendMessage(getFormattedMessage("messages.usage"));
@@ -457,9 +454,6 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
             if (sender.hasPermission("cmail.admin")) {
                 subCommands.add("reload");
                 subCommands.add("admin");
-                if (sender.isOp()) {
-                    subCommands.add("sendall");
-                }
                 subCommands.add("consolesend");
                 subCommands.add("savepack");
                 subCommands.add("sendpack");
@@ -473,7 +467,12 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("send") || args[0].equalsIgnoreCase("consolesend") || args[0].equalsIgnoreCase("sendpack"))) {
             if (sender.hasPermission("cmail.use") || sender.hasPermission("cmail.admin")) {
                 String currentArg = args[1].toLowerCase();
-                if (args[0].equalsIgnoreCase("sendpack") && sender.isOp()) {
+                if (args[0].equalsIgnoreCase("sendpack") && (sender.hasPermission("cmail.admin") || sender.isOp())) {
+                    if ("all".startsWith(currentArg)) {
+                        suggestions.add("all");
+                    }
+                }
+                if (args[0].equalsIgnoreCase("send") && (sender.hasPermission("cmail.admin") || sender.isOp())) {
                     if ("all".startsWith(currentArg)) {
                         suggestions.add("all");
                     }

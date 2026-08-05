@@ -85,7 +85,7 @@ messages:
   # 找不到玩家的提示
   player-not-found: "%prefix%&c找不到玩家 &e%player% &c的紀錄，無法寄信。"
   # 指令用法提示
-  usage: "%prefix%&c用法: /mail send [收件者名稱] [訊息文字] 或 /mail sendall [訊息文字]"
+  usage: "%prefix%&c用法: /mail send [收件者名稱] [訊息文字]"
   # 沒有權限時的提示
   no-permission: "%prefix%&c你沒有權限執行此操作。"
   # 設定檔重載成功時的提示
@@ -105,5 +105,5 @@ messages:
     - "&a/cmail help &7- 顯示此說明選單"
     - "&a/cmail reload &7- 重新載入設定檔 (管理員)"
     - "&a/cmail admin &7- 開啟管理員郵件後台 (管理員)"
-    - "&a/cmail sendall [內容] &7- 發送全服公告與補償 (管理員)"
+    - "&a/cmail send all [內容] &7- 發送全服公告與附件 (管理員)"
     - "&e================================="

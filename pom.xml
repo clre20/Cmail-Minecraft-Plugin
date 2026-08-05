@@ -6,7 +6,7 @@
 
     <groupId>clre20</groupId>
     <artifactId>cmail</artifactId>
-    <version>6.2.3</version>
+    <version>6.3.4</version>
     <packaging>jar</packaging>
 
     <name>cmail</name>
