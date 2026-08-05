@@ -1,0 +1,109 @@
+# ==========================================
+#              Cmail Config
+# ==========================================
+
+# 插件前綴
+prefix: "&e[Cmail] &r"
+
+# 系統郵件發送者顯示名稱
+system-sender-name: "&4[伺服器]"
+
+# 音效設定
+sounds:
+  # 是否啟用操作音效
+  enabled: true
+  # 當發生錯誤
+  error: "BLOCK_NOTE_BLOCK_BASS"
+  # 開啟 GUI 介面時播放的音效
+  open-gui: "UI_TOAST_IN"
+
+# 介面設定
+gui:
+  # 主選單 GUI
+  main:
+    title: "&9郵件管理"
+    inbox-button:
+      material: "CHEST"
+      name: "&a查看收件箱"
+    send-button:
+      material: "PAPER"
+      name: "&b寄送新郵件"
+      lore:
+        - "&7用法: /mail send [玩家] [文字]"
+  
+  # 收件箱 GUI
+  inbox:
+    title: "&9收件箱"
+    mail-item:
+      unread-material: "BOOK"
+      read-material: "PAPER"
+      name: "&f來自: &e%sender%"
+      lore:
+        - "&7內容: &f%message%"
+        - "&7狀態: %status%"
+        - "&8郵件 ID: %id%"
+
+  # 寄送郵件/附件 GUI
+  send:
+    title: "&9放入附件 (按確認送出)"
+    confirm-button:
+      material: "GREEN_STAINED_GLASS_PANE"
+      name: "&a[確認送出]"
+    cancel-button:
+      material: "RED_STAINED_GLASS_PANE"
+      name: "&c[取消寄送]"
+    background:
+      material: "BLACK_STAINED_GLASS_PANE"
+
+# 郵件寄信冷卻設定
+cooldown:
+  enabled: true
+  seconds: 10
+
+# 經濟系統設定 (需安裝 Vault 且伺服器有經濟插件)
+economy:
+  enabled: false
+  cost-send-mail: 10.0 # 寄信基本費用
+  cost-per-attachment: 5.0 # 每個附件額外費用
+
+# 郵件自動過期清理設定
+expiration:
+  enabled: true
+  days: 30 # 保留天數
+  delete-unread: false # 是否連未讀信件也刪除 (預設為 false，僅清理已讀信件)
+
+# 訊息設定
+messages:
+  # 玩家加入時有未讀信件的提示
+  login-notify: "%prefix%&a你目前有 &e%n% &a封未讀郵件！使用 &e/mail &a查看。"
+  # 郵件寄出成功
+  mail-sent: "%prefix%&a郵件已成功寄出！"
+  # 沒有未讀郵件的提示
+  no-mail: "%prefix%&c目前沒有任何郵件。"
+  # 已領取信件與附件的提示
+  attachments-claimed: "%prefix%&a已領取附件。"
+  # 找不到玩家的提示
+  player-not-found: "%prefix%&c找不到玩家 &e%player% &c的紀錄，無法寄信。"
+  # 指令用法提示
+  usage: "%prefix%&c用法: /mail send [收件者名稱] [訊息文字] 或 /mail sendall [訊息文字]"
+  # 沒有權限時的提示
+  no-permission: "%prefix%&c你沒有權限執行此操作。"
+  # 設定檔重載成功時的提示
+  config-reloaded: "%prefix%&a設定檔已成功重新載入！"
+  # 冷卻提示
+  cooldown: "%prefix%&c你必須等待 %time% 秒才能再次寄信！"
+  # 餘額不足提示
+  insufficient-funds: "%prefix%&c你沒有足夠的餘額寄信！需要花費 $%cost%"
+  # 扣除寄信費用提示
+  mail-cost-deducted: "%prefix%&a已扣除寄信費用 $%cost%！"
+  # 幫助選單內容
+  help-menu:
+    - "&e========== &bCmail 郵件系統 &e=========="
+    - "&a/cmail &7- 開啟郵件選單"
+    - "&a/cmail mail &7- 開啟郵件選單"
+    - "&a/cmail send [玩家] [內容] &7- 寄送附件與信件"
+    - "&a/cmail help &7- 顯示此說明選單"
+    - "&a/cmail reload &7- 重新載入設定檔 (管理員)"
+    - "&a/cmail admin &7- 開啟管理員郵件後台 (管理員)"
+    - "&a/cmail sendall [內容] &7- 發送全服公告與補償 (管理員)"
+    - "&e================================="

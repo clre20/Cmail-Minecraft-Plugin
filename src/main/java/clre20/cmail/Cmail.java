@@ -250,11 +250,17 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     return true;
                 }
                 if (args.length < 4) {
-                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,...> <禮包名稱> <訊息內容>");
+                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,... 或 all> <禮包名稱> <訊息內容>");
                     return true;
                 }
                 
                 String targetsArg = args[1];
+                boolean isAll = targetsArg.equalsIgnoreCase("all");
+                if (isAll && !sender.isOp()) {
+                    sender.sendMessage(getFormattedMessage("messages.no-permission"));
+                    return true;
+                }
+                
                 String packName = args[2].trim();
                 
                 StringBuilder msgBuilder = new StringBuilder();
@@ -293,9 +299,20 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     }
                 }
                 
-                String[] targetNames = targetsArg.split(",");
                 UUID consoleUUID = new UUID(0L, 0L);
                 
+                if (isAll) {
+                    db.saveBroadcastMail(consoleUUID, message, attachments).thenRun(() -> {
+                        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+                            String notify = getFormattedMessage("messages.login-notify").replace("%n%", "1");
+                            onlinePlayer.sendMessage(notify);
+                        }
+                    });
+                    sender.sendMessage("§e[Cmail] §a已成功發送禮包郵件給全服所有玩家。");
+                    return true;
+                }
+                
+                String[] targetNames = targetsArg.split(",");
                 for (String name : targetNames) {
                     String targetName = name.trim();
                     if (targetName.isEmpty()) continue;
@@ -389,7 +406,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 cooldowns.put(player.getUniqueId(), System.currentTimeMillis() + (seconds * 1000L));
             }
         } else if (args[0].equalsIgnoreCase("sendall")) {
-            if (!player.hasPermission("cmail.admin")) {
+            if (!player.isOp()) {
                 player.sendMessage(getFormattedMessage("messages.no-permission"));
                 return true;
             }
@@ -440,7 +457,9 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
             if (sender.hasPermission("cmail.admin")) {
                 subCommands.add("reload");
                 subCommands.add("admin");
-                subCommands.add("sendall");
+                if (sender.isOp()) {
+                    subCommands.add("sendall");
+                }
                 subCommands.add("consolesend");
                 subCommands.add("savepack");
                 subCommands.add("sendpack");
@@ -454,6 +473,11 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("send") || args[0].equalsIgnoreCase("consolesend") || args[0].equalsIgnoreCase("sendpack"))) {
             if (sender.hasPermission("cmail.use") || sender.hasPermission("cmail.admin")) {
                 String currentArg = args[1].toLowerCase();
+                if (args[0].equalsIgnoreCase("sendpack") && sender.isOp()) {
+                    if ("all".startsWith(currentArg)) {
+                        suggestions.add("all");
+                    }
+                }
                 for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
                     if (onlinePlayer.getName().toLowerCase().startsWith(currentArg)) {
                         suggestions.add(onlinePlayer.getName());

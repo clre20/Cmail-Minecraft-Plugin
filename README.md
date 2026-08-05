@@ -23,16 +23,18 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
 
 ## 指令與權限
 
+本插件主指令為 `/cmail`。
+
 | 指令 | 說明 | 執行端 | 權限節點 | 預設 |
 | :--- | :--- | :--- | :--- | :--- |
 | `/cmail` 或 `/cmail mail` | 開啟個人收件箱 GUI | 僅限玩家 | `cmail.use` | 所有人 |
 | `/cmail send <玩家> <訊息>` | 撰寫郵件並開啟附件放置 GUI | 僅限玩家 | `cmail.use` | 所有人 |
 | `/cmail help` | 顯示指令說明清單 | 僅限玩家 | `cmail.use` | 所有人 |
 | `/cmail admin` | 開啟管理員審查選單 | 僅限玩家 | `cmail.admin` | OP |
-| `/cmail sendall <訊息>` | 撰寫並發送全服廣播郵件 | 僅限玩家 | `cmail.admin` | OP |
+| `/cmail sendall <訊息>` | 撰寫並發送全服廣播郵件 | 僅限玩家 | 僅限 OP | OP |
 | `/cmail reload` | 重新載入設定檔 | 遊戲內 / 控制台 | `cmail.admin` | OP |
 | `/cmail savepack <禮包名稱>` | 在遊戲內打包道具為禮包範本 | 僅限玩家 | `cmail.admin` | OP |
-| `/cmail sendpack <玩家1,玩家2,...> <禮包名稱> <訊息>` | 發送禮包範本給多位玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
+| `/cmail sendpack <玩家1,玩家2,... 或 all>` `<禮包名稱> <訊息>` | 發送禮包範本給玩家或全服 | 遊戲內 / 控制台 | 僅限 OP (`all` 參數) / 其他 `cmail.admin` | OP |
 | `/cmail consolesend <玩家1,玩家2,...> <訊息> [材質:格位:數量]...` | 透過純指令發送特定排列的道具給多位玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
 
 ## 使用範例
@@ -43,13 +45,17 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
    /cmail savepack cash_v1
    ```
 2. 將道具放入前 27 格，點擊右下角儲存並關閉。
-3. 於控制台發送給指定玩家：
+3. 於控制台或遊戲內發送給指定玩家：
    ```bash
    cmail sendpack playerA,playerB cash_v1 感謝贊助，這是您的禮包。
+   ```
+   或是發送給全服所有玩家（僅限 OP 或控制台執行）：
+   ```bash
+   cmail sendpack all cash_v1 感謝大家的支持，這是全服補償禮包！
    ```
 
 ### 2. 控制台直接發送基本道具
 控制台發送 64 個鑽石在第 4 格，16 個金錠在第 22 格給特定玩家：
 ```bash
-cmail consolesend playerC 這是您的活動獎勵 DIAMOND:4:64 GOLD_INGOT:22:16
+cmail consolesend smart 這是您的活動獎勵 DIAMOND:4:64 GOLD_INGOT:22:16
 ```
