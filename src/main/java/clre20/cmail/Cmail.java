@@ -81,12 +81,55 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
     public DatabaseManager getDb() { return db; }
 
     public String getFormattedMessage(String path) {
-        String msg = getConfig().getString(path, "");
+        // 不帶預設值，讓舊版 config.yml 缺少的訊息可自動使用插件內建的預設文字
+        String msg = getConfig().getString(path);
+        if (msg == null) msg = "";
         String prefix = getConfig().getString("prefix", "");
         msg = msg.replace("%prefix%", prefix);
         return LegacyComponentSerializer.legacySection().serialize(
                 LegacyComponentSerializer.legacyAmpersand().deserialize(msg)
         );
+    }
+
+    public void notifyOnlineReceivers(Iterable<UUID> receivers) {
+        String notify = getFormattedMessage("messages.login-notify").replace("%n%", "1");
+        for (UUID receiver : receivers) {
+            Player onlineTarget = Bukkit.getPlayer(receiver);
+            if (onlineTarget != null && onlineTarget.isOnline()) {
+                onlineTarget.sendMessage(notify);
+            }
+        }
+    }
+
+    /**
+     * 從 DiscordLink 取得所有已綁定 Discord 的玩家，成功時在主執行緒執行 onSuccess。
+     * 讀取失敗或沒有任何綁定玩家時，會直接通知 sender。
+     */
+    private void withLinkedPlayers(CommandSender sender, java.util.function.Consumer<List<UUID>> onSuccess) {
+        DiscordLinkHook.getLinkedPlayers(this).whenComplete((receivers, error) -> Bukkit.getScheduler().runTask(this, () -> {
+            if (sender instanceof Player p && !p.isOnline()) return;
+            if (error != null) {
+                Throwable cause = error.getCause() != null ? error.getCause() : error;
+                Bukkit.getConsoleSender().sendMessage("§e[Cmail] §c[DiscordLink] " + cause.getMessage());
+                sender.sendMessage(getFormattedMessage("messages.link-dc-unavailable"));
+                return;
+            }
+            if (receivers.isEmpty()) {
+                sender.sendMessage(getFormattedMessage("messages.link-dc-empty"));
+                return;
+            }
+            onSuccess.accept(receivers);
+        }));
+    }
+
+    private void sendToLinkedPlayers(CommandSender sender, String message, List<ItemStack> attachments) {
+        UUID consoleUUID = new UUID(0L, 0L);
+        withLinkedPlayers(sender, receivers ->
+                db.saveMailToMany(consoleUUID, receivers, message, attachments).thenRun(() ->
+                        Bukkit.getScheduler().runTask(this, () -> {
+                            notifyOnlineReceivers(receivers);
+                            sender.sendMessage(getFormattedMessage("messages.link-dc-sent").replace("%n%", String.valueOf(receivers.size())));
+                        })));
     }
 
     @Override
@@ -119,7 +162,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 }
                 
                 if (args.length < 3) {
-                    sender.sendMessage("§e[Cmail] §c用法: /cmail consolesend <玩家1,玩家2,...> <訊息內容> [物品材質:格位:數量] ...");
+                    sender.sendMessage("§e[Cmail] §c用法: /cmail consolesend <玩家1,玩家2,... 或 link_dc_player> <訊息內容> [物品材質:格位:數量] ...");
                     return true;
                 }
                 
@@ -165,9 +208,14 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     sender.sendMessage("§e[Cmail] §c郵件訊息內容不能為空。");
                     return true;
                 }
-                
+
+                if (DiscordLinkHook.isKeyword(targetsArg)) {
+                    sendToLinkedPlayers(sender, message, attachments);
+                    return true;
+                }
+
                 UUID consoleUUID = new UUID(0L, 0L);
-                
+
                 for (String name : targetNames) {
                     String targetName = name.trim();
                     if (targetName.isEmpty()) continue;
@@ -250,7 +298,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     return true;
                 }
                 if (args.length < 4) {
-                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,... 或 all> <禮包名稱> <訊息內容>");
+                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player> <禮包名稱> <訊息內容>");
                     return true;
                 }
                 
@@ -311,7 +359,12 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     sender.sendMessage("§e[Cmail] §a已成功發送禮包郵件給全服所有玩家。");
                     return true;
                 }
-                
+
+                if (DiscordLinkHook.isKeyword(targetsArg)) {
+                    sendToLinkedPlayers(sender, message, attachments);
+                    return true;
+                }
+
                 String[] targetNames = targetsArg.split(",");
                 for (String name : targetNames) {
                     String targetName = name.trim();
@@ -372,8 +425,9 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
             String targetName = args[1];
             boolean isAll = targetName.equalsIgnoreCase("all");
+            boolean isLinkDc = DiscordLinkHook.isKeyword(targetName);
 
-            if (isAll) {
+            if (isAll || isLinkDc) {
                 if (!player.hasPermission("cmail.admin")) {
                     player.sendMessage(getFormattedMessage("messages.no-permission"));
                     return true;
@@ -401,6 +455,9 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
             if (isAll) {
                 // 開啟附件 GUI，傳入 Nil UUID，並設定 isBroadcast = true
                 gui.openSendGUI(player, new UUID(0L, 0L), message, true);
+            } else if (isLinkDc) {
+                // 先取得所有已綁定 Discord 的玩家，再開啟附件 GUI
+                withLinkedPlayers(player, receivers -> gui.openSendGUI(player, MailGUI.SendTarget.LINK_DC, receivers, message));
             } else {
                 // 取得離線玩家資訊
                 OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
@@ -467,6 +524,11 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
         } else if (args.length == 2 && (args[0].equalsIgnoreCase("send") || args[0].equalsIgnoreCase("consolesend") || args[0].equalsIgnoreCase("sendpack"))) {
             if (sender.hasPermission("cmail.use") || sender.hasPermission("cmail.admin")) {
                 String currentArg = args[1].toLowerCase();
+                if (sender.hasPermission("cmail.admin") || sender.isOp()) {
+                    if (DiscordLinkHook.TARGET_KEYWORD.startsWith(currentArg)) {
+                        suggestions.add(DiscordLinkHook.TARGET_KEYWORD);
+                    }
+                }
                 if (args[0].equalsIgnoreCase("sendpack") && (sender.hasPermission("cmail.admin") || sender.isOp())) {
                     if ("all".startsWith(currentArg)) {
                         suggestions.add("all");

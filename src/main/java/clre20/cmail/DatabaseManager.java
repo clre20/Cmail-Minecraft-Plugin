@@ -215,37 +215,48 @@ public class DatabaseManager {
 
     public CompletableFuture<Void> saveBroadcastMail(UUID sender, String msg, List<ItemStack> items) {
         return CompletableFuture.runAsync(() -> {
-            synchronized (this) {
-                String sql = "INSERT INTO mails (sender, receiver, message, items, original_items, timestamp) VALUES (?,?,?,?,?,?)";
-                try {
-                    connection.setAutoCommit(false);
-                    try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                        String serialized = serializeItems(items);
-                        long time = System.currentTimeMillis();
-                        for (org.bukkit.OfflinePlayer target : org.bukkit.Bukkit.getOfflinePlayers()) {
-                            ps.setString(1, sender.toString());
-                            ps.setString(2, target.getUniqueId().toString());
-                            ps.setString(3, msg);
-                            ps.setString(4, serialized);
-                            ps.setString(5, serialized);
-                            ps.setLong(6, time);
-                            ps.addBatch();
-                        }
-                        ps.executeBatch();
-                        connection.commit();
-                        org.bukkit.Bukkit.getConsoleSender().sendMessage("§e[Cmail] §a[Mail] 全服郵件發送成功！");
-                    } catch (Exception e) {
-                        connection.rollback();
-                        throw e;
-                    } finally {
-                        connection.setAutoCommit(true);
-                    }
-                } catch (Exception e) {
-                    org.bukkit.Bukkit.getConsoleSender().sendMessage("§e[Cmail] §c[Mail] 發送全服郵件時出錯:");
-                    e.printStackTrace();
-                }
+            List<UUID> receivers = new ArrayList<>();
+            for (org.bukkit.OfflinePlayer target : org.bukkit.Bukkit.getOfflinePlayers()) {
+                receivers.add(target.getUniqueId());
             }
+            insertBatch(sender, receivers, msg, items, "全服郵件");
         });
+    }
+
+    /** 一次寄送同一封郵件給多位收件者 (例如所有已綁定 Discord 的玩家) */
+    public CompletableFuture<Void> saveMailToMany(UUID sender, java.util.Collection<UUID> receivers, String msg, List<ItemStack> items) {
+        return CompletableFuture.runAsync(() -> insertBatch(sender, receivers, msg, items, "多人郵件 (" + receivers.size() + " 位)"));
+    }
+
+    private synchronized void insertBatch(UUID sender, java.util.Collection<UUID> receivers, String msg, List<ItemStack> items, String label) {
+        String sql = "INSERT INTO mails (sender, receiver, message, items, original_items, timestamp) VALUES (?,?,?,?,?,?)";
+        try {
+            connection.setAutoCommit(false);
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                String serialized = serializeItems(items);
+                long time = System.currentTimeMillis();
+                for (UUID receiver : receivers) {
+                    ps.setString(1, sender.toString());
+                    ps.setString(2, receiver.toString());
+                    ps.setString(3, msg);
+                    ps.setString(4, serialized);
+                    ps.setString(5, serialized);
+                    ps.setLong(6, time);
+                    ps.addBatch();
+                }
+                ps.executeBatch();
+                connection.commit();
+                org.bukkit.Bukkit.getConsoleSender().sendMessage("§e[Cmail] §a[Mail] " + label + "發送成功！");
+            } catch (Exception e) {
+                connection.rollback();
+                throw e;
+            } finally {
+                connection.setAutoCommit(true);
+            }
+        } catch (Exception e) {
+            org.bukkit.Bukkit.getConsoleSender().sendMessage("§e[Cmail] §c[Mail] 發送" + label + "時出錯:");
+            e.printStackTrace();
+        }
     }
 
     public CompletableFuture<Integer> cleanupExpiredMails(int days, boolean deleteUnread) {

@@ -20,6 +20,11 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
   * 系統發送的信件（如禮包、後台信件）之發信人名稱可於 `config.yml` 中自由配置，支援色彩代碼。
 * **自動清理機制**：
   * 定時自動清理過期郵件，可設定保留天數及是否清理未讀/含附件郵件。
+* **DiscordLink 整合 (`link_dc_player`)**：
+  * 收件者填入 `link_dc_player`，即可一次寄信給所有已綁定 Discord 的玩家。
+  * 名單在發送當下直接從 [DiscordLink](https://github.com/clre20/Discord-link-Minecraft-Plugin) 的 SQLite 資料庫以唯讀方式讀取，不需修改 DiscordLink，也不需開啟其 HTTP API。
+  * 資料庫位置會自動依照 DiscordLink 的 `config.yml` 中 `database.sqlite-file-name` 判斷 (預設 `plugins/DiscordLink/database.db`)。
+  * 支援 `send`、`sendpack`、`consolesend` 三個指令，皆需 `cmail.admin` 權限。
 
 ## 指令與權限
 
@@ -28,13 +33,19 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
 | 指令 | 說明 | 執行端 | 權限節點 | 預設 |
 | :--- | :--- | :--- | :--- | :--- |
 | `/cmail` 或 `/cmail mail` | 開啟個人收件箱 GUI | 僅限玩家 | `cmail.use` | 所有人 |
-| `/cmail send <玩家 或 all> <訊息>` | 撰寫郵件並開啟附件放置 GUI（輸入 `all` 時可發給全服） | 僅限玩家 | `all` 參數需 `cmail.admin` / 普通為 `cmail.use` | 所有人 |
-| `/cmail help` | 顯示指令說明清單 | 僅限玩家 | `cmail.use` | 所有人 |
+| `/cmail send <玩家 或 all 或 link_dc_player> <訊息>` | 撰寫郵件並開啟附件放置 GUI（`all` 發給全服、`link_dc_player` 發給所有已綁定 Discord 的玩家） | 僅限玩家 | `all` / `link_dc_player` 需 `cmail.admin` / 普通為 `cmail.use` | 所有人 |
+| `/cmail help` | 顯示指令說明清單 | 遊戲內 / 控制台 | `cmail.use` | 所有人 |
 | `/cmail admin` | 開啟管理員審查選單 | 僅限玩家 | `cmail.admin` | OP |
 | `/cmail reload` | 重新載入設定檔 | 遊戲內 / 控制台 | `cmail.admin` | OP |
 | `/cmail savepack <禮包名稱>` | 在遊戲內打包道具為禮包範本 | 僅限玩家 | `cmail.admin` | OP |
-| `/cmail sendpack <玩家1,玩家2,... 或 all> <禮包名稱> <訊息>` | 發送禮包範本給玩家或全服 | 遊戲內 / 控制台 | `all` 參數需 `cmail.admin` / 其他 `cmail.admin` | OP |
-| `/cmail consolesend <玩家1,玩家2,...> <訊息> [材質:格位:數量]...` | 透過純指令發送特定排列的道具給多位玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
+| `/cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player> <禮包名稱> <訊息>` | 發送禮包範本給指定玩家、全服或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | `cmail.admin` | OP |
+| `/cmail consolesend <玩家1,玩家2,... 或 link_dc_player> <訊息> [材質:格位:數量]...` | 透過純指令發送特定排列的道具給多位玩家或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
+
+> 指令別名：`/mail` 等同 `/cmail`。
+>
+> 收件者關鍵字：
+> * `all`：伺服器上所有曾加入過的玩家。
+> * `link_dc_player`：所有已透過 DiscordLink 綁定 Discord 的玩家（需安裝 DiscordLink，名單於發送當下讀取）。
 
 ## 使用範例
 
@@ -58,3 +69,31 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
 ```bash
 cmail consolesend smart 這是您的活動獎勵 DIAMOND:4:64 GOLD_INGOT:22:16
 ```
+
+### 3. 寄給所有已綁定 Discord 的玩家
+遊戲內撰寫並放入附件（需 `cmail.admin`）：
+```bash
+/cmail send link_dc_player 感謝綁定 Discord，這是您的綁定獎勵！
+```
+控制台發送禮包範本：
+```bash
+cmail sendpack link_dc_player cash_v1 感謝綁定 Discord，這是您的綁定獎勵！
+```
+控制台直接發送道具：
+```bash
+cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
+```
+* 若找不到 DiscordLink 資料庫，會提示 `link-dc-unavailable` 訊息並在控制台顯示詳細原因，郵件不會寄出。
+* 若目前沒有任何玩家綁定，會提示 `link-dc-empty` 訊息。
+* 寄出後，在線上的收件者會立即收到新郵件提示。
+
+## 設定檔新增訊息
+
+以下訊息可於 `config.yml` 的 `messages` 區塊自訂（舊版設定檔若缺少這些欄位，會自動使用插件內建的預設文字）：
+
+| 欄位 | 說明 |
+| :--- | :--- |
+| `broadcast-sent` | 全服郵件寄出成功 |
+| `link-dc-sent` | 寄給已綁定 Discord 玩家成功，`%n%` 為收件人數 |
+| `link-dc-empty` | 目前沒有任何玩家綁定 Discord |
+| `link-dc-unavailable` | 無法讀取 DiscordLink 綁定資料 |

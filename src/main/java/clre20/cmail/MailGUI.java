@@ -24,7 +24,14 @@ import java.util.*;
 public class MailGUI implements Listener {
     private final Cmail plugin;
 
-    private record PendingMail(UUID receiverUUID, String message, boolean isBroadcast, List<ItemStack> attachments) {}
+    /** 寄件對象: 單一玩家、全服、所有已綁定 Discord 的玩家 */
+    public enum SendTarget { PLAYER, ALL, LINK_DC }
+
+    private record PendingMail(SendTarget target, List<UUID> receivers, String message, List<ItemStack> attachments) {
+        PendingMail withAttachments(List<ItemStack> items) {
+            return new PendingMail(target, receivers, message, items);
+        }
+    }
     private final Map<UUID, PendingMail> pendingMails = new HashMap<>();
     private final Map<UUID, Integer> adminPages = new HashMap<>();
     private final Map<UUID, Boolean> adminSafetyLock = new HashMap<>();
@@ -214,7 +221,11 @@ public class MailGUI implements Listener {
     }
 
     public void openSendGUI(Player player, UUID receiverUUID, String message, boolean isBroadcast) {
-        pendingMails.put(player.getUniqueId(), new PendingMail(receiverUUID, message, isBroadcast, new ArrayList<>()));
+        openSendGUI(player, isBroadcast ? SendTarget.ALL : SendTarget.PLAYER, List.of(receiverUUID), message);
+    }
+
+    public void openSendGUI(Player player, SendTarget target, List<UUID> receivers, String message) {
+        pendingMails.put(player.getUniqueId(), new PendingMail(target, receivers, message, new ArrayList<>()));
         Inventory inv = Bukkit.createInventory(null, 36, color(plugin.getConfig().getString("gui.send.title", "&9放入附件 (按確認送出)")));
 
         Material bgMat = Material.matchMaterial(plugin.getConfig().getString("gui.send.background.material", "BLACK_STAINED_GLASS_PANE"));
@@ -671,7 +682,7 @@ public class MailGUI implements Listener {
                             return;
                         }
                         
-                        pendingMails.put(player.getUniqueId(), new PendingMail(pending.receiverUUID(), pending.message(), pending.isBroadcast(), items));
+                        pendingMails.put(player.getUniqueId(), pending.withAttachments(items));
                         for (int i = 0; i < 27; i++) {
                             event.getInventory().setItem(i, null);
                         }
@@ -682,7 +693,7 @@ public class MailGUI implements Listener {
                     for (int i = 0; i < 27; i++) {
                         event.getInventory().setItem(i, null);
                     }
-                    sendPendingMail(player, new PendingMail(pending.receiverUUID(), pending.message(), pending.isBroadcast(), items));
+                    sendPendingMail(player, pending.withAttachments(items));
                 } else if (slot == 33) {
                     pendingMails.remove(player.getUniqueId());
                     player.closeInventory();
@@ -1087,7 +1098,7 @@ public class MailGUI implements Listener {
     }
 
     private void sendPendingMail(Player player, PendingMail pending) {
-        if (pending.isBroadcast()) {
+        if (pending.target() == SendTarget.ALL) {
             plugin.getDb().saveBroadcastMail(player.getUniqueId(), pending.message(), pending.attachments()).thenRun(() -> {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player.sendMessage(plugin.getFormattedMessage("messages.broadcast-sent"));
@@ -1095,8 +1106,17 @@ public class MailGUI implements Listener {
                     player.closeInventory();
                 });
             });
+        } else if (pending.target() == SendTarget.LINK_DC) {
+            plugin.getDb().saveMailToMany(player.getUniqueId(), pending.receivers(), pending.message(), pending.attachments()).thenRun(() -> {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    plugin.notifyOnlineReceivers(pending.receivers());
+                    player.sendMessage(plugin.getFormattedMessage("messages.link-dc-sent").replace("%n%", String.valueOf(pending.receivers().size())));
+                    playSuccessSound(player);
+                    player.closeInventory();
+                });
+            });
         } else {
-            plugin.getDb().saveMail(player.getUniqueId(), pending.receiverUUID(), pending.message(), pending.attachments()).thenRun(() -> {
+            plugin.getDb().saveMail(player.getUniqueId(), pending.receivers().get(0), pending.message(), pending.attachments()).thenRun(() -> {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player.sendMessage(plugin.getFormattedMessage("messages.mail-sent"));
                     playSuccessSound(player);

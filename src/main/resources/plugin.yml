@@ -1,11 +1,11 @@
 name: Cmail
-version: '6.3.4'
+version: '6.4.0'
 main: clre20.cmail.Cmail
 api-version: '1.21.11'
 prefix: Cmail
 authors: [ Clre20 ]
 description: A Minecraft Mail plugin
-softdepend: [Vault]
+softdepend: [Vault, DiscordLink]
 commands:
   cmail:
     description: 郵件主命令
