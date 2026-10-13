@@ -89,7 +89,9 @@ cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
 
 ## 設定檔新增訊息
 
-以下訊息可於 `config.yml` 的 `messages` 區塊自訂（舊版設定檔若缺少這些欄位，會自動使用插件內建的預設文字）：
+以下訊息可於 `config.yml` 的 `messages` 區塊自訂：
+
+> **設定檔自動補齊**：插件啟動或執行 `/cmail reload` 時，若伺服器上的 `config.yml` 缺少新版欄位，會自動補上預設值與註解，原有的設定值不會被覆蓋。`help-menu` 會保留自訂內容，只會將舊版錯誤的 `/cmail sendall` 修正為 `/cmail send all`，並補上 `link_dc_player` 說明。
 
 | 欄位 | 說明 |
 | :--- | :--- |
@@ -97,3 +99,106 @@ cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
 | `link-dc-sent` | 寄給已綁定 Discord 玩家成功，`%n%` 為收件人數 |
 | `link-dc-empty` | 目前沒有任何玩家綁定 Discord |
 | `link-dc-unavailable` | 無法讀取 DiscordLink 綁定資料 |
+
+
+# Cmail
+
+Cmail is a virtual mail and gift package plugin designed specifically for Paper (Minecraft 1.21.x+) servers. It utilizes a local SQLite database for persistent mail storage and seamlessly integrates with the Vault economy system. Featuring full NBT data preservation, it allows administrators to bundle items into gift packages and distribute them via batch console commands—ideal for reward distribution and automated webstore integrations.
+
+## Features
+
+* **Anti-Exploit & Safety Mechanisms**:
+  * If a player disconnects unexpectedly, the server reloads, or an inventory GUI closes improperly during "Attachment Placement" or "Package Editing," all items are automatically returned to the player's inventory. If the inventory is full, items drop naturally at the player's location, preventing item loss and duplication glitches.
+  * Read-only GUIs strictly disable Shift-Clicking and drag actions to prevent unintended removal of attached items.
+* **NBT Package Template System**:
+  * Administrators can open a 36-slot GUI in-game, arrange items containing custom NBT data (such as custom currencies, items with custom tags, or lore weapons), and save them as reusable templates.
+  * Supports distributing saved package templates directly to multiple players using comma-separated player names via in-game or console commands.
+* **Console Command Integration**:
+  * Offers `consolesend` and `sendpack` commands that can be invoked via the server console, RCON, or external scripts to distribute mail and items automatically.
+* **Admin Inspection & Audit GUI**:
+  * Administrators can review the entire server's mail history. A built-in security lock mechanism requires unlocking before modifying mail contents, adjusting attachments, or permanently deleting emails.
+* **Vault Economy Support**:
+  * Optionally configure mail sending fees and attachment fees, complete with a fee confirmation interface when players compose mail.
+* **Custom Sender Profiles**:
+  * The sender display name for automated mail (such as reward packages or administrative mail) can be customized in `config.yml` with color code support.
+* **Automated Mail Cleanup**:
+  * Periodically purges expired mail according to configured retention periods, with options to preserve or clear unread mail and mail with unclaimed attachments.
+* **DiscordLink Integration (`link_dc_player`)**:
+  * Specify `link_dc_player` as the recipient to broadcast mail to all players with linked Discord accounts simultaneously.
+  * The recipient list is read in real time from [DiscordLink](https://github.com/clre20/Discord-link-Minecraft-Plugin)'s SQLite database in read-only mode, requiring no modifications to DiscordLink or enabling its HTTP API.
+  * Automatically detects the database location based on the `database.sqlite-file-name` setting in DiscordLink's `config.yml` (default: `plugins/DiscordLink/database.db`).
+  * Supported by `send`, `sendpack`, and `consolesend` commands (all require the `cmail.admin` permission).
+
+## Commands & Permissions
+
+The primary command for this plugin is `/cmail`.
+
+| Command | Description | Executor | Permission Node | Default |
+| :--- | :--- | :--- | :--- | :--- |
+| `/cmail` or `/cmail mail` | Open personal mailbox GUI | Player only | `cmail.use` | Everyone |
+| `/cmail send <player\|all\|link_dc_player> <message>` | Compose mail and open attachment placement GUI (`all` for all players, `link_dc_player` for all Discord-linked players) | Player only | `all` / `link_dc_player` require `cmail.admin` / Standard: `cmail.use` | Everyone |
+| `/cmail help` | Display command help list | In-game / Console | `cmail.use` | Everyone |
+| `/cmail admin` | Open admin inspection GUI | Player only | `cmail.admin` | OP |
+| `/cmail reload` | Reload configuration files | In-game / Console | `cmail.admin` | OP |
+| `/cmail savepack <package_name>` | Package inventory items into a gift template in-game | Player only | `cmail.admin` | OP |
+| `/cmail sendpack <player1,player2...\|all\|link_dc_player> <package_name> <message>` | Send a package template to specified players, the entire server, or all Discord-linked players | In-game / Console | `cmail.admin` | OP |
+| `/cmail consolesend <player1,player2...\|link_dc_player> <message> [MATERIAL:SLOT:AMOUNT]...` | Send specific items in designated slots to players via command | In-game / Console | Console unrestricted / `cmail.admin` | OP |
+
+> Command Alias: `/mail` is an alias for `/cmail`.
+>
+> Recipient Keywords:
+> * `all`: All players who have ever joined the server.
+> * `link_dc_player`: All players currently linked via DiscordLink (requires DiscordLink installed; list is queried dynamically upon execution).
+
+## Usage Examples
+
+### 1. Packaging and Sending Custom NBT Items
+1. Place custom items into your hotbar, then run in-game:
+   ```bash
+   /cmail savepack cash_v1
+   ```
+2. Place the items into the first 27 slots of the GUI, then click the bottom-right corner to save and exit.
+3. Send to specific players via console or in-game:
+   ```bash
+   cmail sendpack playerA,playerB cash_v1 Thank you for your support! Here is your reward package.
+   ```
+   Or send to all players across the server (requires `cmail.admin`, OP, or console):
+   ```bash
+   cmail sendpack all cash_v1 Thank you for your support, here is server-wide compensation!
+   ```
+
+### 2. Direct Item Distribution via Console
+Send 64 diamonds to slot 4 and 16 gold ingots to slot 22 for a specific player from console:
+```bash
+cmail consolesend smart Event Reward DIAMOND:4:64 GOLD_INGOT:22:16
+```
+
+### 3. Sending to All Discord-Linked Players
+Compose in-game and attach items (requires `cmail.admin`):
+```bash
+/cmail send link_dc_player Thank you for linking your Discord! Here is your linking reward.
+```
+Send a package template via console:
+```bash
+cmail sendpack link_dc_player cash_v1 Thank you for linking your Discord! Here is your linking reward.
+```
+Send raw items via console:
+```bash
+cmail consolesend link_dc_player Linking_Reward DIAMOND:0:5
+```
+* If the DiscordLink database cannot be located, a `link-dc-unavailable` message will trigger and log details to the console; the mail will not be sent.
+* If no players are currently linked, a `link-dc-empty` notification will appear.
+* Once delivered, any online recipients will receive an instant notification for new mail.
+
+## Configurable Message Keys
+
+The following messages can be configured under the `messages` section of `config.yml`:
+
+> **Automatic config update**: On startup or `/cmail reload`, any keys missing from the server's `config.yml` are added automatically with their default values and comments. Existing values are never overwritten. `help-menu` keeps its custom content; only the outdated `/cmail sendall` line is corrected to `/cmail send all`, and the `link_dc_player` line is added.
+
+| Key | Description |
+| :--- | :--- |
+| `broadcast-sent` | Successfully broadcast mail to the entire server |
+| `link-dc-sent` | Successfully sent mail to Discord-linked players; `%n%` represents the recipient count |
+| `link-dc-empty` | No players are currently linked with Discord |
+| `link-dc-unavailable` | Failed to load DiscordLink database records |

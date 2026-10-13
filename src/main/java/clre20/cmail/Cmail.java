@@ -32,6 +32,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        updateConfig();
         this.db = new DatabaseManager(this);
         this.gui = new MailGUI(this);
 
@@ -79,6 +80,77 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
     }
 
     public DatabaseManager getDb() { return db; }
+
+    /**
+     * 將插件內建 config.yml 中有、但伺服器設定檔缺少的欄位自動補上 (連同註解)。
+     * 已存在的欄位一律保留原值，不會被覆蓋。
+     */
+    private void updateConfig() {
+        org.bukkit.configuration.file.FileConfiguration config = getConfig();
+        org.bukkit.configuration.Configuration defaults = config.getDefaults();
+        if (defaults == null) return;
+
+        List<String> added = new ArrayList<>();
+        for (String key : defaults.getKeys(true)) {
+            if (config.contains(key, true)) continue;
+            boolean isSection = defaults.isConfigurationSection(key);
+            if (isSection) {
+                config.createSection(key);
+            } else {
+                config.set(key, defaults.get(key));
+                added.add(key);
+            }
+            config.setComments(key, defaults.getComments(key));
+            config.setInlineComments(key, defaults.getInlineComments(key));
+        }
+
+        if (migrateHelpMenu(config, defaults)) {
+            added.add("messages.help-menu (修正/新增指令說明)");
+        }
+
+        if (!added.isEmpty()) {
+            saveConfig();
+            Bukkit.getConsoleSender().sendMessage("§e[Cmail] §a[Config] 已自動補齊 " + added.size() + " 個缺少的設定欄位: §e" + String.join(", ", added));
+        }
+    }
+
+    /**
+     * 修正舊版 help-menu: 將不存在的「/cmail sendall」改為正確的「/cmail send all」，
+     * 並補上 link_dc_player 說明。其他自訂內容保持不變。
+     */
+    static boolean migrateHelpMenu(org.bukkit.configuration.file.FileConfiguration config, org.bukkit.configuration.Configuration defaults) {
+        String path = "messages.help-menu";
+        List<String> help = new ArrayList<>(config.getStringList(path));
+        if (help.isEmpty()) return false;
+
+        String sendAllLine = null;
+        String linkDcLine = null;
+        for (String line : defaults.getStringList(path)) {
+            if (line.contains("/cmail send all")) sendAllLine = line;
+            if (line.contains(DiscordLinkHook.TARGET_KEYWORD)) linkDcLine = line;
+        }
+
+        boolean changed = false;
+        int sendAllIndex = -1;
+        for (int i = 0; i < help.size(); i++) {
+            String line = help.get(i);
+            if (line.contains("/cmail sendall") && sendAllLine != null) {
+                help.set(i, sendAllLine);
+                changed = true;
+            }
+            if (help.get(i).contains("/cmail send all")) sendAllIndex = i;
+        }
+
+        if (linkDcLine != null && help.stream().noneMatch(l -> l.contains(DiscordLinkHook.TARGET_KEYWORD))) {
+            // 插在「send all」之後，找不到就插在最後一行 (分隔線) 之前
+            int insertAt = sendAllIndex >= 0 ? sendAllIndex + 1 : Math.max(help.size() - 1, 0);
+            help.add(insertAt, linkDcLine);
+            changed = true;
+        }
+
+        if (changed) config.set(path, help);
+        return changed;
+    }
 
     public String getFormattedMessage(String path) {
         // 不帶預設值，讓舊版 config.yml 缺少的訊息可自動使用插件內建的預設文字
@@ -152,6 +224,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     return true;
                 }
                 reloadConfig();
+                updateConfig();
                 sender.sendMessage(getFormattedMessage("messages.config-reloaded"));
                 Bukkit.getConsoleSender().sendMessage("§e[Cmail] §a[Config] 設定檔已成功重新載入！由 " + sender.getName() + " 執行。");
                 return true;
