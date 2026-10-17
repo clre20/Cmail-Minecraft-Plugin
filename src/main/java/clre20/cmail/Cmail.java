@@ -345,7 +345,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 
                 gui.getActivePackEditors().put(player.getUniqueId(), packName);
                 
-                org.bukkit.inventory.Inventory inv = Bukkit.createInventory(null, 36, LegacyComponentSerializer.legacyAmpersand().deserialize("&9打包禮包: " + packName));
+                org.bukkit.inventory.Inventory inv = CmailHolder.createInventory(36, LegacyComponentSerializer.legacyAmpersand().deserialize("&9打包禮包: " + packName));
                 
                 ItemStack bg = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
                 org.bukkit.inventory.meta.ItemMeta bgMeta = bg.getItemMeta();

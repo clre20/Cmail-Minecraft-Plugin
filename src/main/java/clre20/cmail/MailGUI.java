@@ -140,7 +140,7 @@ public class MailGUI implements Listener {
     }
 
     public void openMainMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, color(plugin.getConfig().getString("gui.main.title", "&9郵件管理")));
+        Inventory inv = CmailHolder.createInventory(27, color(plugin.getConfig().getString("gui.main.title", "&9郵件管理")));
         
         Material inboxMat = Material.matchMaterial(plugin.getConfig().getString("gui.main.inbox-button.material", "CHEST"));
         if (inboxMat == null) inboxMat = Material.CHEST;
@@ -163,7 +163,7 @@ public class MailGUI implements Listener {
         inboxPages.put(player.getUniqueId(), page);
         plugin.getDb().getMails(player.getUniqueId(), false).thenAccept(mails -> {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Inventory inv = Bukkit.createInventory(null, 54, color(plugin.getConfig().getString("gui.inbox.title", "&9收件箱")));
+                Inventory inv = CmailHolder.createInventory(54, color(plugin.getConfig().getString("gui.inbox.title", "&9收件箱")));
                 
                 String unreadMatStr = plugin.getConfig().getString("gui.inbox.mail-item.unread-material", "BOOK");
                 String readMatStr = plugin.getConfig().getString("gui.inbox.mail-item.read-material", "PAPER");
@@ -226,7 +226,7 @@ public class MailGUI implements Listener {
 
     public void openSendGUI(Player player, SendTarget target, List<UUID> receivers, String message) {
         pendingMails.put(player.getUniqueId(), new PendingMail(target, receivers, message, new ArrayList<>()));
-        Inventory inv = Bukkit.createInventory(null, 36, color(plugin.getConfig().getString("gui.send.title", "&9放入附件 (按確認送出)")));
+        Inventory inv = CmailHolder.createInventory(36, color(plugin.getConfig().getString("gui.send.title", "&9放入附件 (按確認送出)")));
 
         Material bgMat = Material.matchMaterial(plugin.getConfig().getString("gui.send.background.material", "BLACK_STAINED_GLASS_PANE"));
         if (bgMat == null) bgMat = Material.BLACK_STAINED_GLASS_PANE;
@@ -260,7 +260,7 @@ public class MailGUI implements Listener {
                 plugin.getDb().markAsRead(id);
                 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    Inventory inv = Bukkit.createInventory(null, 54, color("&9讀取郵件 #" + id));
+                    Inventory inv = CmailHolder.createInventory(54, color("&9讀取郵件 #" + id));
                     
                     // Header Row (0-8)
                     ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
@@ -307,7 +307,7 @@ public class MailGUI implements Listener {
     }
 
     public void openDeleteConfirmGUI(Player player, int id) {
-        Inventory inv = Bukkit.createInventory(null, 27, color("&4確認刪除郵件 #" + id));
+        Inventory inv = CmailHolder.createInventory(27, color("&4確認刪除郵件 #" + id));
         ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
         for (int i = 0; i < 27; i++) {
             inv.setItem(i, bg);
@@ -328,7 +328,7 @@ public class MailGUI implements Listener {
     }
 
         public void openAdminDeleteConfirmGUI(Player player, int id) {
-        Inventory inv = Bukkit.createInventory(null, 27, color("&4管理員確認刪除郵件 #" + id));
+        Inventory inv = CmailHolder.createInventory(27, color("&4管理員確認刪除郵件 #" + id));
         ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
         for (int i = 0; i < 27; i++) {
             inv.setItem(i, bg);
@@ -954,7 +954,7 @@ public class MailGUI implements Listener {
         adminPages.put(player.getUniqueId(), page);
         plugin.getDb().getAllMails().thenAccept(mails -> {
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Inventory inv = Bukkit.createInventory(null, 54, color("&9管理員 - 所有郵件"));
+                Inventory inv = CmailHolder.createInventory(54, color("&9管理員 - 所有郵件"));
                 
                 int start = page * 45;
                 int end = Math.min(start + 45, mails.size());
@@ -1001,7 +1001,7 @@ public class MailGUI implements Listener {
         plugin.getDb().getAllMails().thenAccept(mails -> {
             mails.stream().filter(m -> m.id() == id).findFirst().ifPresent(mail -> {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    Inventory inv = Bukkit.createInventory(null, 54, color("&9管理員 - 預覽郵件 #" + id));
+                    Inventory inv = CmailHolder.createInventory(54, color("&9管理員 - 預覽郵件 #" + id));
                     
                     ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
                     for (int i = 0; i < 9; i++) {
@@ -1064,7 +1064,7 @@ public class MailGUI implements Listener {
     }
 
     public void openSendConfirmGUI(Player player, double cost) {
-        Inventory inv = Bukkit.createInventory(null, 27, color("&4確認支付手續費？"));
+        Inventory inv = CmailHolder.createInventory(27, color("&4確認支付手續費？"));
         ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
         for (int i = 0; i < 27; i++) {
             inv.setItem(i, bg);
@@ -1131,7 +1131,7 @@ public class MailGUI implements Listener {
         plugin.getDb().getAllMails().thenAccept(mails -> {
             mails.stream().filter(m -> m.id() == id).findFirst().ifPresent(mail -> {
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    Inventory inv = Bukkit.createInventory(null, 54, color("&d原始附件預覽 #" + id));
+                    Inventory inv = CmailHolder.createInventory(54, color("&d原始附件預覽 #" + id));
                     
                     ItemStack bg = createItem(Material.BLACK_STAINED_GLASS_PANE, " ");
                     for (int i = 0; i < 9; i++) {
