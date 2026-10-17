@@ -104,6 +104,10 @@ messages:
   link-dc-empty: "%prefix%&c目前沒有任何玩家綁定 Discord，郵件未寄出。"
   # link_dc_player: 無法讀取 DiscordLink 資料庫
   link-dc-unavailable: "%prefix%&c無法讀取 DiscordLink 綁定資料，請確認已安裝 DiscordLink 插件 (詳細錯誤見控制台)。"
+  # online_link_dc_player: 寄給已綁定 Discord 且在線上的玩家成功 (%n% = 收件人數)
+  online-link-dc-sent: "%prefix%&a已寄送郵件給 &e%n% &a位已綁定 Discord 且在線上的玩家！"
+  # online_link_dc_player: 沒有任何已綁定 Discord 的玩家在線上
+  online-link-dc-empty: "%prefix%&c目前沒有任何已綁定 Discord 的玩家在線上，郵件未寄出。"
   # 幫助選單內容
   help-menu:
     - "&e========== &bCmail 郵件系統 &e=========="
@@ -115,4 +119,5 @@ messages:
     - "&a/cmail admin &7- 開啟管理員郵件後台 (管理員)"
     - "&a/cmail send all [內容] &7- 發送全服公告與附件 (管理員)"
     - "&a/cmail send link_dc_player [內容] &7- 寄給所有已綁定 Discord 的玩家 (管理員)"
+    - "&a/cmail send online_link_dc_player [內容] &7- 寄給已綁定 Discord 且在線上的玩家 (管理員)"
     - "&e================================="

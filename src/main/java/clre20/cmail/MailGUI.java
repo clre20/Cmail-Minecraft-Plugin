@@ -24,8 +24,8 @@ import java.util.*;
 public class MailGUI implements Listener {
     private final Cmail plugin;
 
-    /** 寄件對象: 單一玩家、全服、所有已綁定 Discord 的玩家 */
-    public enum SendTarget { PLAYER, ALL, LINK_DC }
+    /** 寄件對象: 單一玩家、全服、所有已綁定 Discord 的玩家、已綁定 Discord 且在線上的玩家 */
+    public enum SendTarget { PLAYER, ALL, LINK_DC, ONLINE_LINK_DC }
 
     private record PendingMail(SendTarget target, List<UUID> receivers, String message, List<ItemStack> attachments) {
         PendingMail withAttachments(List<ItemStack> items) {
@@ -1106,11 +1106,12 @@ public class MailGUI implements Listener {
                     player.closeInventory();
                 });
             });
-        } else if (pending.target() == SendTarget.LINK_DC) {
+        } else if (pending.target() == SendTarget.LINK_DC || pending.target() == SendTarget.ONLINE_LINK_DC) {
+            String sentKey = pending.target() == SendTarget.ONLINE_LINK_DC ? "messages.online-link-dc-sent" : "messages.link-dc-sent";
             plugin.getDb().saveMailToMany(player.getUniqueId(), pending.receivers(), pending.message(), pending.attachments()).thenRun(() -> {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     plugin.notifyOnlineReceivers(pending.receivers());
-                    player.sendMessage(plugin.getFormattedMessage("messages.link-dc-sent").replace("%n%", String.valueOf(pending.receivers().size())));
+                    player.sendMessage(plugin.getFormattedMessage(sentKey).replace("%n%", String.valueOf(pending.receivers().size())));
                     playSuccessSound(player);
                     player.closeInventory();
                 });

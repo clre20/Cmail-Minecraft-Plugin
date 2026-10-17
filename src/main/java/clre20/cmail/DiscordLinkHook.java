@@ -22,11 +22,18 @@ import java.util.concurrent.CompletableFuture;
  */
 public final class DiscordLinkHook {
     public static final String TARGET_KEYWORD = "link_dc_player";
+    /** 已綁定 Discord 且目前在線上的玩家 */
+    public static final String ONLINE_TARGET_KEYWORD = "online_link_dc_player";
 
     private DiscordLinkHook() {}
 
+    /** 是否為 link_dc_player 或 online_link_dc_player */
     public static boolean isKeyword(String arg) {
-        return TARGET_KEYWORD.equalsIgnoreCase(arg);
+        return TARGET_KEYWORD.equalsIgnoreCase(arg) || isOnlineKeyword(arg);
+    }
+
+    public static boolean isOnlineKeyword(String arg) {
+        return ONLINE_TARGET_KEYWORD.equalsIgnoreCase(arg);
     }
 
     /**

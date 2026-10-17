@@ -116,40 +116,52 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
     /**
      * 修正舊版 help-menu: 將不存在的「/cmail sendall」改為正確的「/cmail send all」，
-     * 並補上 link_dc_player 說明。其他自訂內容保持不變。
+     * 並補上 link_dc_player / online_link_dc_player 說明。其他自訂內容保持不變。
      */
     static boolean migrateHelpMenu(org.bukkit.configuration.file.FileConfiguration config, org.bukkit.configuration.Configuration defaults) {
         String path = "messages.help-menu";
         List<String> help = new ArrayList<>(config.getStringList(path));
         if (help.isEmpty()) return false;
 
+        // 結尾加空白，避免 "link_dc_player" 誤判到 "online_link_dc_player"
+        String sendAllCmd = "/cmail send all ";
+        String linkDcCmd = "/cmail send " + DiscordLinkHook.TARGET_KEYWORD + " ";
+        String onlineLinkDcCmd = "/cmail send " + DiscordLinkHook.ONLINE_TARGET_KEYWORD + " ";
+
         String sendAllLine = null;
         String linkDcLine = null;
+        String onlineLinkDcLine = null;
         for (String line : defaults.getStringList(path)) {
-            if (line.contains("/cmail send all")) sendAllLine = line;
-            if (line.contains(DiscordLinkHook.TARGET_KEYWORD)) linkDcLine = line;
+            if (line.contains(sendAllCmd)) sendAllLine = line;
+            if (line.contains(linkDcCmd)) linkDcLine = line;
+            if (line.contains(onlineLinkDcCmd)) onlineLinkDcLine = line;
         }
 
         boolean changed = false;
-        int sendAllIndex = -1;
         for (int i = 0; i < help.size(); i++) {
-            String line = help.get(i);
-            if (line.contains("/cmail sendall") && sendAllLine != null) {
+            if (help.get(i).contains("/cmail sendall") && sendAllLine != null) {
                 help.set(i, sendAllLine);
                 changed = true;
             }
-            if (help.get(i).contains("/cmail send all")) sendAllIndex = i;
         }
 
-        if (linkDcLine != null && help.stream().noneMatch(l -> l.contains(DiscordLinkHook.TARGET_KEYWORD))) {
-            // 插在「send all」之後，找不到就插在最後一行 (分隔線) 之前
-            int insertAt = sendAllIndex >= 0 ? sendAllIndex + 1 : Math.max(help.size() - 1, 0);
-            help.add(insertAt, linkDcLine);
-            changed = true;
-        }
+        changed |= insertHelpLineAfter(help, linkDcCmd, linkDcLine, sendAllCmd);
+        changed |= insertHelpLineAfter(help, onlineLinkDcCmd, onlineLinkDcLine, linkDcCmd);
 
         if (changed) config.set(path, help);
         return changed;
+    }
+
+    /** 若 help 中沒有 cmd 的說明，則把 line 插在 afterCmd 之後，找不到就插在最後一行 (分隔線) 之前 */
+    private static boolean insertHelpLineAfter(List<String> help, String cmd, String line, String afterCmd) {
+        if (line == null || help.stream().anyMatch(l -> l.contains(cmd))) return false;
+        int afterIndex = -1;
+        for (int i = 0; i < help.size(); i++) {
+            if (help.get(i).contains(afterCmd)) afterIndex = i;
+        }
+        int insertAt = afterIndex >= 0 ? afterIndex + 1 : Math.max(help.size() - 1, 0);
+        help.add(insertAt, line);
+        return true;
     }
 
     public String getFormattedMessage(String path) {
@@ -175,10 +187,11 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
 
     /**
      * 從 DiscordLink 取得所有已綁定 Discord 的玩家，成功時在主執行緒執行 onSuccess。
-     * 讀取失敗或沒有任何綁定玩家時，會直接通知 sender。
+     * onlineOnly 為 true 時只保留目前在線上的玩家。
+     * 讀取失敗或沒有任何符合的玩家時，會直接通知 sender。
      */
-    private void withLinkedPlayers(CommandSender sender, java.util.function.Consumer<List<UUID>> onSuccess) {
-        DiscordLinkHook.getLinkedPlayers(this).whenComplete((receivers, error) -> Bukkit.getScheduler().runTask(this, () -> {
+    private void withLinkedPlayers(CommandSender sender, boolean onlineOnly, java.util.function.Consumer<List<UUID>> onSuccess) {
+        DiscordLinkHook.getLinkedPlayers(this).whenComplete((linked, error) -> Bukkit.getScheduler().runTask(this, () -> {
             if (sender instanceof Player p && !p.isOnline()) return;
             if (error != null) {
                 Throwable cause = error.getCause() != null ? error.getCause() : error;
@@ -186,21 +199,25 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 sender.sendMessage(getFormattedMessage("messages.link-dc-unavailable"));
                 return;
             }
+            List<UUID> receivers = onlineOnly
+                    ? linked.stream().filter(uuid -> Bukkit.getPlayer(uuid) != null).toList()
+                    : linked;
             if (receivers.isEmpty()) {
-                sender.sendMessage(getFormattedMessage("messages.link-dc-empty"));
+                sender.sendMessage(getFormattedMessage(onlineOnly ? "messages.online-link-dc-empty" : "messages.link-dc-empty"));
                 return;
             }
             onSuccess.accept(receivers);
         }));
     }
 
-    private void sendToLinkedPlayers(CommandSender sender, String message, List<ItemStack> attachments) {
+    private void sendToLinkedPlayers(CommandSender sender, boolean onlineOnly, String message, List<ItemStack> attachments) {
         UUID consoleUUID = new UUID(0L, 0L);
-        withLinkedPlayers(sender, receivers ->
+        String sentKey = onlineOnly ? "messages.online-link-dc-sent" : "messages.link-dc-sent";
+        withLinkedPlayers(sender, onlineOnly, receivers ->
                 db.saveMailToMany(consoleUUID, receivers, message, attachments).thenRun(() ->
                         Bukkit.getScheduler().runTask(this, () -> {
                             notifyOnlineReceivers(receivers);
-                            sender.sendMessage(getFormattedMessage("messages.link-dc-sent").replace("%n%", String.valueOf(receivers.size())));
+                            sender.sendMessage(getFormattedMessage(sentKey).replace("%n%", String.valueOf(receivers.size())));
                         })));
     }
 
@@ -235,7 +252,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 }
                 
                 if (args.length < 3) {
-                    sender.sendMessage("§e[Cmail] §c用法: /cmail consolesend <玩家1,玩家2,... 或 link_dc_player> <訊息內容> [物品材質:格位:數量] ...");
+                    sender.sendMessage("§e[Cmail] §c用法: /cmail consolesend <玩家1,玩家2,... 或 link_dc_player 或 online_link_dc_player> <訊息內容> [物品材質:格位:數量] ...");
                     return true;
                 }
                 
@@ -283,7 +300,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 }
 
                 if (DiscordLinkHook.isKeyword(targetsArg)) {
-                    sendToLinkedPlayers(sender, message, attachments);
+                    sendToLinkedPlayers(sender, DiscordLinkHook.isOnlineKeyword(targetsArg), message, attachments);
                     return true;
                 }
 
@@ -371,7 +388,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                     return true;
                 }
                 if (args.length < 4) {
-                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player> <禮包名稱> <訊息內容>");
+                    sender.sendMessage("§e[Cmail] §c用法: /cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player 或 online_link_dc_player> <禮包名稱> <訊息內容>");
                     return true;
                 }
                 
@@ -434,7 +451,7 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 }
 
                 if (DiscordLinkHook.isKeyword(targetsArg)) {
-                    sendToLinkedPlayers(sender, message, attachments);
+                    sendToLinkedPlayers(sender, DiscordLinkHook.isOnlineKeyword(targetsArg), message, attachments);
                     return true;
                 }
 
@@ -530,7 +547,9 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 gui.openSendGUI(player, new UUID(0L, 0L), message, true);
             } else if (isLinkDc) {
                 // 先取得所有已綁定 Discord 的玩家，再開啟附件 GUI
-                withLinkedPlayers(player, receivers -> gui.openSendGUI(player, MailGUI.SendTarget.LINK_DC, receivers, message));
+                boolean onlineOnly = DiscordLinkHook.isOnlineKeyword(targetName);
+                MailGUI.SendTarget target = onlineOnly ? MailGUI.SendTarget.ONLINE_LINK_DC : MailGUI.SendTarget.LINK_DC;
+                withLinkedPlayers(player, onlineOnly, receivers -> gui.openSendGUI(player, target, receivers, message));
             } else {
                 // 取得離線玩家資訊
                 OfflinePlayer target = Bukkit.getOfflinePlayer(targetName);
@@ -600,6 +619,9 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
                 if (sender.hasPermission("cmail.admin") || sender.isOp()) {
                     if (DiscordLinkHook.TARGET_KEYWORD.startsWith(currentArg)) {
                         suggestions.add(DiscordLinkHook.TARGET_KEYWORD);
+                    }
+                    if (DiscordLinkHook.ONLINE_TARGET_KEYWORD.startsWith(currentArg)) {
+                        suggestions.add(DiscordLinkHook.ONLINE_TARGET_KEYWORD);
                     }
                 }
                 if (args[0].equalsIgnoreCase("sendpack") && (sender.hasPermission("cmail.admin") || sender.isOp())) {

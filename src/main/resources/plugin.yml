@@ -1,5 +1,5 @@
 name: Cmail
-version: '6.4.0'
+version: '6.5.2'
 main: clre20.cmail.Cmail
 api-version: '1.21.11'
 prefix: Cmail

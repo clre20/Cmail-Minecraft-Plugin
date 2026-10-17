@@ -20,8 +20,9 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
   * 系統發送的信件（如禮包、後台信件）之發信人名稱可於 `config.yml` 中自由配置，支援色彩代碼。
 * **自動清理機制**：
   * 定時自動清理過期郵件，可設定保留天數及是否清理未讀/含附件郵件。
-* **DiscordLink 整合 (`link_dc_player`)**：
+* **DiscordLink 整合 (`link_dc_player` / `online_link_dc_player`)**：
   * 收件者填入 `link_dc_player`，即可一次寄信給所有已綁定 Discord 的玩家。
+  * 收件者填入 `online_link_dc_player`，則只寄給已綁定 Discord 且目前在線上的玩家 (`link_dc_player` 的升級版，適合線上活動獎勵)。
   * 名單在發送當下直接從 [DiscordLink](https://github.com/clre20/Discord-link-Minecraft-Plugin) 的 SQLite 資料庫以唯讀方式讀取，不需修改 DiscordLink，也不需開啟其 HTTP API。
   * 資料庫位置會自動依照 DiscordLink 的 `config.yml` 中 `database.sqlite-file-name` 判斷 (預設 `plugins/DiscordLink/database.db`)。
   * 支援 `send`、`sendpack`、`consolesend` 三個指令，皆需 `cmail.admin` 權限。
@@ -33,19 +34,20 @@ Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件�
 | 指令 | 說明 | 執行端 | 權限節點 | 預設 |
 | :--- | :--- | :--- | :--- | :--- |
 | `/cmail` 或 `/cmail mail` | 開啟個人收件箱 GUI | 僅限玩家 | `cmail.use` | 所有人 |
-| `/cmail send <玩家 或 all 或 link_dc_player> <訊息>` | 撰寫郵件並開啟附件放置 GUI（`all` 發給全服、`link_dc_player` 發給所有已綁定 Discord 的玩家） | 僅限玩家 | `all` / `link_dc_player` 需 `cmail.admin` / 普通為 `cmail.use` | 所有人 |
+| `/cmail send <玩家 或 all 或 link_dc_player 或 online_link_dc_player> <訊息>` | 撰寫郵件並開啟附件放置 GUI（`all` 發給全服、`link_dc_player` 發給所有已綁定 Discord 的玩家、`online_link_dc_player` 發給已綁定 Discord 且在線上的玩家） | 僅限玩家 | `all` / `link_dc_player` / `online_link_dc_player` 需 `cmail.admin` / 普通為 `cmail.use` | 所有人 |
 | `/cmail help` | 顯示指令說明清單 | 遊戲內 / 控制台 | `cmail.use` | 所有人 |
 | `/cmail admin` | 開啟管理員審查選單 | 僅限玩家 | `cmail.admin` | OP |
 | `/cmail reload` | 重新載入設定檔 | 遊戲內 / 控制台 | `cmail.admin` | OP |
 | `/cmail savepack <禮包名稱>` | 在遊戲內打包道具為禮包範本 | 僅限玩家 | `cmail.admin` | OP |
-| `/cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player> <禮包名稱> <訊息>` | 發送禮包範本給指定玩家、全服或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | `cmail.admin` | OP |
-| `/cmail consolesend <玩家1,玩家2,... 或 link_dc_player> <訊息> [材質:格位:數量]...` | 透過純指令發送特定排列的道具給多位玩家或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
+| `/cmail sendpack <玩家1,玩家2,... 或 all 或 link_dc_player 或 online_link_dc_player> <禮包名稱> <訊息>` | 發送禮包範本給指定玩家、全服或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | `cmail.admin` | OP |
+| `/cmail consolesend <玩家1,玩家2,... 或 link_dc_player 或 online_link_dc_player> <訊息> [材質:格位:數量]...` | 透過純指令發送特定排列的道具給多位玩家或所有已綁定 Discord 的玩家 | 遊戲內 / 控制台 | 控制台無限制 / `cmail.admin` | OP |
 
 > 指令別名：`/mail` 等同 `/cmail`。
 >
 > 收件者關鍵字：
 > * `all`：伺服器上所有曾加入過的玩家。
 > * `link_dc_player`：所有已透過 DiscordLink 綁定 Discord 的玩家（需安裝 DiscordLink，名單於發送當下讀取）。
+> * `online_link_dc_player`：已綁定 Discord 且發送當下在線上的玩家。
 
 ## 使用範例
 
@@ -85,13 +87,14 @@ cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
 ```
 * 若找不到 DiscordLink 資料庫，會提示 `link-dc-unavailable` 訊息並在控制台顯示詳細原因，郵件不會寄出。
 * 若目前沒有任何玩家綁定，會提示 `link-dc-empty` 訊息。
+* 將 `link_dc_player` 換成 `online_link_dc_player` 即可只寄給在線上的綁定玩家；若沒有任何綁定玩家在線上，會提示 `online-link-dc-empty` 訊息。
 * 寄出後，在線上的收件者會立即收到新郵件提示。
 
 ## 設定檔新增訊息
 
 以下訊息可於 `config.yml` 的 `messages` 區塊自訂：
 
-> **設定檔自動補齊**：插件啟動或執行 `/cmail reload` 時，若伺服器上的 `config.yml` 缺少新版欄位，會自動補上預設值與註解，原有的設定值不會被覆蓋。`help-menu` 會保留自訂內容，只會將舊版錯誤的 `/cmail sendall` 修正為 `/cmail send all`，並補上 `link_dc_player` 說明。
+> **設定檔自動補齊**：插件啟動或執行 `/cmail reload` 時，若伺服器上的 `config.yml` 缺少新版欄位，會自動補上預設值與註解，原有的設定值不會被覆蓋。`help-menu` 會保留自訂內容，只會將舊版錯誤的 `/cmail sendall` 修正為 `/cmail send all`，並補上 `link_dc_player` / `online_link_dc_player` 說明。
 
 | 欄位 | 說明 |
 | :--- | :--- |
@@ -99,6 +102,8 @@ cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
 | `link-dc-sent` | 寄給已綁定 Discord 玩家成功，`%n%` 為收件人數 |
 | `link-dc-empty` | 目前沒有任何玩家綁定 Discord |
 | `link-dc-unavailable` | 無法讀取 DiscordLink 綁定資料 |
+| `online-link-dc-sent` | 寄給已綁定 Discord 且在線上的玩家成功，`%n%` 為收件人數 |
+| `online-link-dc-empty` | 目前沒有任何已綁定 Discord 的玩家在線上 |
 
 
 # Cmail
@@ -123,8 +128,9 @@ Cmail is a virtual mail and gift package plugin designed specifically for Paper 
   * The sender display name for automated mail (such as reward packages or administrative mail) can be customized in `config.yml` with color code support.
 * **Automated Mail Cleanup**:
   * Periodically purges expired mail according to configured retention periods, with options to preserve or clear unread mail and mail with unclaimed attachments.
-* **DiscordLink Integration (`link_dc_player`)**:
+* **DiscordLink Integration (`link_dc_player` / `online_link_dc_player`)**:
   * Specify `link_dc_player` as the recipient to broadcast mail to all players with linked Discord accounts simultaneously.
+  * Specify `online_link_dc_player` to send only to Discord-linked players who are currently online (an upgraded `link_dc_player`, ideal for live event rewards).
   * The recipient list is read in real time from [DiscordLink](https://github.com/clre20/Discord-link-Minecraft-Plugin)'s SQLite database in read-only mode, requiring no modifications to DiscordLink or enabling its HTTP API.
   * Automatically detects the database location based on the `database.sqlite-file-name` setting in DiscordLink's `config.yml` (default: `plugins/DiscordLink/database.db`).
   * Supported by `send`, `sendpack`, and `consolesend` commands (all require the `cmail.admin` permission).
@@ -136,19 +142,20 @@ The primary command for this plugin is `/cmail`.
 | Command | Description | Executor | Permission Node | Default |
 | :--- | :--- | :--- | :--- | :--- |
 | `/cmail` or `/cmail mail` | Open personal mailbox GUI | Player only | `cmail.use` | Everyone |
-| `/cmail send <player\|all\|link_dc_player> <message>` | Compose mail and open attachment placement GUI (`all` for all players, `link_dc_player` for all Discord-linked players) | Player only | `all` / `link_dc_player` require `cmail.admin` / Standard: `cmail.use` | Everyone |
+| `/cmail send <player\|all\|link_dc_player\|online_link_dc_player> <message>` | Compose mail and open attachment placement GUI (`all` for all players, `link_dc_player` for all Discord-linked players, `online_link_dc_player` for online Discord-linked players) | Player only | `all` / `link_dc_player` / `online_link_dc_player` require `cmail.admin` / Standard: `cmail.use` | Everyone |
 | `/cmail help` | Display command help list | In-game / Console | `cmail.use` | Everyone |
 | `/cmail admin` | Open admin inspection GUI | Player only | `cmail.admin` | OP |
 | `/cmail reload` | Reload configuration files | In-game / Console | `cmail.admin` | OP |
 | `/cmail savepack <package_name>` | Package inventory items into a gift template in-game | Player only | `cmail.admin` | OP |
-| `/cmail sendpack <player1,player2...\|all\|link_dc_player> <package_name> <message>` | Send a package template to specified players, the entire server, or all Discord-linked players | In-game / Console | `cmail.admin` | OP |
-| `/cmail consolesend <player1,player2...\|link_dc_player> <message> [MATERIAL:SLOT:AMOUNT]...` | Send specific items in designated slots to players via command | In-game / Console | Console unrestricted / `cmail.admin` | OP |
+| `/cmail sendpack <player1,player2...\|all\|link_dc_player\|online_link_dc_player> <package_name> <message>` | Send a package template to specified players, the entire server, or all Discord-linked players | In-game / Console | `cmail.admin` | OP |
+| `/cmail consolesend <player1,player2...\|link_dc_player\|online_link_dc_player> <message> [MATERIAL:SLOT:AMOUNT]...` | Send specific items in designated slots to players via command | In-game / Console | Console unrestricted / `cmail.admin` | OP |
 
 > Command Alias: `/mail` is an alias for `/cmail`.
 >
 > Recipient Keywords:
 > * `all`: All players who have ever joined the server.
 > * `link_dc_player`: All players currently linked via DiscordLink (requires DiscordLink installed; list is queried dynamically upon execution).
+> * `online_link_dc_player`: Discord-linked players who are online at the time of sending.
 
 ## Usage Examples
 
@@ -188,13 +195,14 @@ cmail consolesend link_dc_player Linking_Reward DIAMOND:0:5
 ```
 * If the DiscordLink database cannot be located, a `link-dc-unavailable` message will trigger and log details to the console; the mail will not be sent.
 * If no players are currently linked, a `link-dc-empty` notification will appear.
+* Replace `link_dc_player` with `online_link_dc_player` to send only to online linked players; if none are online, an `online-link-dc-empty` notification will appear.
 * Once delivered, any online recipients will receive an instant notification for new mail.
 
 ## Configurable Message Keys
 
 The following messages can be configured under the `messages` section of `config.yml`:
 
-> **Automatic config update**: On startup or `/cmail reload`, any keys missing from the server's `config.yml` are added automatically with their default values and comments. Existing values are never overwritten. `help-menu` keeps its custom content; only the outdated `/cmail sendall` line is corrected to `/cmail send all`, and the `link_dc_player` line is added.
+> **Automatic config update**: On startup or `/cmail reload`, any keys missing from the server's `config.yml` are added automatically with their default values and comments. Existing values are never overwritten. `help-menu` keeps its custom content; only the outdated `/cmail sendall` line is corrected to `/cmail send all`, and the `link_dc_player` / `online_link_dc_player` lines are added.
 
 | Key | Description |
 | :--- | :--- |
@@ -202,3 +210,5 @@ The following messages can be configured under the `messages` section of `config
 | `link-dc-sent` | Successfully sent mail to Discord-linked players; `%n%` represents the recipient count |
 | `link-dc-empty` | No players are currently linked with Discord |
 | `link-dc-unavailable` | Failed to load DiscordLink database records |
+| `online-link-dc-sent` | Successfully sent mail to online Discord-linked players; `%n%` represents the recipient count |
+| `online-link-dc-empty` | No Discord-linked players are currently online |
