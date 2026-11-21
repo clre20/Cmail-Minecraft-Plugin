@@ -42,6 +42,10 @@ public final class DiscordLinkHook {
      * 若找不到 DiscordLink 資料庫或讀取失敗，Future 會以例外結束。
      */
     public static CompletableFuture<List<UUID>> getLinkedPlayers(Cmail plugin) {
+        if (clre20.discordLink.api.DiscordLinkAPI.isAvailable()) {
+            java.util.Set<UUID> set = clre20.discordLink.api.DiscordLinkAPI.getLinkedPlayers(plugin);
+            return CompletableFuture.completedFuture(new ArrayList<>(set));
+        }
         File dbFile = resolveDatabaseFile(plugin);
         return CompletableFuture.supplyAsync(() -> {
             if (!dbFile.isFile()) {

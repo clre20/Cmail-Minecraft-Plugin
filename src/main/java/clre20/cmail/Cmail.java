@@ -44,6 +44,10 @@ public class Cmail extends JavaPlugin implements CommandExecutor, TabCompleter, 
         Bukkit.getPluginManager().registerEvents(this, this);
         Bukkit.getPluginManager().registerEvents(gui, this);
 
+        if (clre20.httpHub.api.HttpHubAPI.isAvailable()) {
+            clre20.httpHub.api.HttpHubAPI.registerUpdateCheck(this, "clre20/Cmail", getPluginMeta().getVersion(), "cmail.admin", null);
+        }
+
         // Vault Setup
         if (getServer().getPluginManager().getPlugin("Vault") != null) {
             if (VaultHook.setup()) {

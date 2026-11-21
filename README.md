@@ -1,6 +1,9 @@
 # Cmail
 
-Cmail 是一款專為 Paper (Minecraft 1.21.x+) 伺服器設計的虛擬郵件與禮包系統。本插件採用 SQLite 本地資料庫儲存郵件數據，並支援 Vault 經濟系統。具備完整的 NBT 道具保存能力，可供管理員打包禮包並進行批次指令分發，適用於伺服器道具發放與自動化商城整合。
+Cmail 是一款專為 Paper 26.3 (標準穩定版) (Minecraft 1.21.x+) 伺服器設計的虛擬郵件與禮包系統。本插件採用 SQLite 本地資料庫儲存郵件數據，並支援 Vault 經濟系統。具備完整的 NBT 道具保存能力，可供管理員打包禮包並進行批次指令分發，適用於伺服器道具發放與自動化商城整合。
+
+
+> **版本檢查提示**：若伺服器有安裝 [HttpHub](https://github.com/clre20/HttpHub)，本插件自動由 HttpHub 集中處理版本檢查與管理員登入通知，避免各插件自開連線與背景執行緒。
 
 ## 功能特性
 
@@ -108,7 +111,10 @@ cmail consolesend link_dc_player 綁定獎勵 DIAMOND:0:5
 
 # Cmail
 
-Cmail is a virtual mail and gift package plugin designed specifically for Paper (Minecraft 1.21.x+) servers. It utilizes a local SQLite database for persistent mail storage and seamlessly integrates with the Vault economy system. Featuring full NBT data preservation, it allows administrators to bundle items into gift packages and distribute them via batch console commands—ideal for reward distribution and automated webstore integrations.
+
+> **Update Checker**: When [HttpHub](https://github.com/clre20/HttpHub) is installed, update checks and operator login alerts are handled centrally by HttpHub via virtual threads, preventing redundant background connections.
+
+Cmail is a virtual mail and gift package plugin designed specifically for Paper 26.3 (標準穩定版) (Minecraft 1.21.x+) servers. It utilizes a local SQLite database for persistent mail storage and seamlessly integrates with the Vault economy system. Featuring full NBT data preservation, it allows administrators to bundle items into gift packages and distribute them via batch console commands—ideal for reward distribution and automated webstore integrations.
 
 ## Features
 

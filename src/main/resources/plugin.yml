@@ -5,7 +5,7 @@ api-version: '1.21.11'
 prefix: Cmail
 authors: [ Clre20 ]
 description: A Minecraft Mail plugin
-softdepend: [Vault, DiscordLink]
+softdepend: [ Vault, DiscordLink, HttpHub ]
 commands:
   cmail:
     description: 郵件主命令
